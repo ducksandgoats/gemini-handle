@@ -26,6 +26,23 @@ module.exports = function makeGemini (opts = {}) {
     return theData
   }
 
+  function intoStream (data) {
+    return new Readable({
+      read () {
+        this.push(data)
+        this.push(null)
+      }
+    })
+  }
+
+  async function moveToData(data){
+    let mainData = ''
+    for await (const test of data){
+      mainData = mainData + test.toString()
+    }
+    return mainData
+  }
+
   return makeFetch(async (request) => {
 
     const { url, method, headers: reqHeaders, body, signal, referrer } = request
@@ -57,13 +74,11 @@ module.exports = function makeGemini (opts = {}) {
     
             // TODO: Figure out what to do with `1x` status codes
             const isOK = (statusCode >= 10) && (statusCode < 300)
-    
-            // If the response is 200, the mime type should be the meta tag
-            // const headers = isOK ? { 'Content-Type': meta } : {}
+
             const headers = {'Content-Type': mainRes}
-    
-            // If the response had an error, use the meta as the response body
-            const data = isOK ? mainReq ? [`<html><head><title>${toRequest.toString()}</title></head><body>${JSON.stringify(res)}</body></html>`] : [JSON.stringify(res)] : mainReq ? [`<html><head><title>${toRequest.toString()}</title></head><body>${JSON.stringify(meta)}</body></html>`] : [JSON.stringify(meta)]
+
+            const data = isOK ? res : intoStream(meta)
+
             resolve({
               statusCode: statusCode * 10,
               statusText,
@@ -73,6 +88,8 @@ module.exports = function makeGemini (opts = {}) {
           }
         })
       })
+      mainObj.data = await moveToData(mainObj.data)
+      mainObj.data = mainReq ? [`<html><head><title>${toRequest.toString()}</title></head><body>${mainObj.data}</body></html>`] : [mainObj.data]
       return sendTheData(signal, mainObj)
     } catch (error) {
       return sendTheData(signal, {statusCode: 500, headers: {'Content-Type': mainRes}, data: mainReq ? [`<html><head><title>Gemini-Handle</title></head><body>${JSON.stringify(error.stack)}</body></html>`] : [JSON.stringify(error.stack)]})
