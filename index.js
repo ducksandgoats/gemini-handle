@@ -26,15 +26,6 @@ module.exports = function makeGemini (opts = {}) {
     return theData
   }
 
-  function intoStream (data) {
-    return new Readable({
-      read () {
-        this.push(data)
-        this.push(null)
-      }
-    })
-  }
-
   async function moveToData(data){
     let mainData = ''
     for await (const test of data){
@@ -70,14 +61,11 @@ module.exports = function makeGemini (opts = {}) {
           if (err) {
             reject(err)
           } else {
-            const { statusCode, statusMessage: statusText, meta } = res
-    
-            // TODO: Figure out what to do with `1x` status codes
-            const isOK = (statusCode >= 10) && (statusCode < 300)
+            const { statusCode, statusMessage: statusText } = res
 
             const headers = {'Content-Type': mainRes}
 
-            const data = isOK ? res : intoStream(meta)
+            const data = res
 
             resolve({
               statusCode: statusCode * 10,
