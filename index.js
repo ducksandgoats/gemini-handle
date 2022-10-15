@@ -34,6 +34,9 @@ module.exports = function makeGemini (opts = {}) {
       signal.addEventListener('abort', takeCareOfIt)
     }
 
+    const mainReq = !reqHeaders.accept || !reqHeaders.accept.includes('application/json')
+    const mainRes = mainReq ? 'text/html; charset=utf-8' : 'application/json; charset=utf-8'
+
     try {
       const toRequest = new URL(url, referrer)
 
@@ -56,10 +59,11 @@ module.exports = function makeGemini (opts = {}) {
             const isOK = (statusCode >= 10) && (statusCode < 300)
     
             // If the response is 200, the mime type should be the meta tag
-            const headers = isOK ? { 'Content-Type': meta } : {}
+            // const headers = isOK ? { 'Content-Type': meta } : {}
+            const headers = {'Content-Type': mainRes}
     
             // If the response had an error, use the meta as the response body
-            const data = isOK ? res : [meta]
+            const data = isOK ? mainReq ? [`<html><head><title>${toRequest.toString()}</title></head><body>${JSON.stringify(res)}</body></html>`] : [JSON.stringify(res)] : mainReq ? [`<html><head><title>${toRequest.toString()}</title></head><body>${JSON.stringify(meta)}</body></html>`] : [JSON.stringify(meta)]
             resolve({
               statusCode: statusCode * 10,
               statusText,
@@ -71,16 +75,7 @@ module.exports = function makeGemini (opts = {}) {
       })
       return sendTheData(signal, mainObj)
     } catch (error) {
-      return sendTheData(signal, {statusCode: 500, headers: {}, data: [JSON.stringify(error.stack)]})
-    }
-  })
-}
-
-function intoStream (data) {
-  return new Readable({
-    read () {
-      this.push(data)
-      this.push(null)
+      return sendTheData(signal, {statusCode: 500, headers: {'Content-Type': mainRes}, data: mainReq ? [`<html><head><title>Gemini-Handle</title></head><body>${JSON.stringify(error.stack)}</body></html>`] : [JSON.stringify(error.stack)]})
     }
   })
 }
