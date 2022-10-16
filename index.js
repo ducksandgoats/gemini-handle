@@ -52,7 +52,7 @@ module.exports = function makeGemini (opts = {}) {
           } else {
             const { statusCode, statusMessage: statusText } = res
 
-            const headers = {}
+            const headers = {'Content-Type': 'text/gemini'}
 
             const data = res
 
