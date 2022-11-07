@@ -41,7 +41,13 @@ module.exports = function makeGemini (opts = {}) {
         return sendTheData(signal, {statusCode: 409, headers: {}, data: ['wrong protocol']})
       } else if (!method) {
         return sendTheData(signal, {statusCode: 409, headers: {}, data: ['something wrong with method']})
-      } else if (!toRequest.hostname.startsWith('gemini.')) {
+      }
+
+      if(toRequest.hostname === '_'){
+        return sendTheData(signal, {statusCode: 20 * 10, statusText: 'works', headers: {'Content-Type': 'text/plain; charset=utf-8'}, data: ['works']})
+      }
+      
+      if (!toRequest.hostname.startsWith('gemini.')) {
         toRequest.hostname = 'gemini.' + toRequest.hostname
       }
 
