@@ -1,6 +1,7 @@
+module.exports = async function makeGemini(opts = {}) {
 const geminiReq = require('@derhuerst/gemini/client')
-const makeFetch = require('make-fetch')
-const { Readable } = require('stream')
+const {makeFetch} = await import('make-fetch')
+// const { Readable } = require('stream')
 
 const DEFAULT_OPTS = {
   followRedirects: true,
@@ -9,8 +10,6 @@ const DEFAULT_OPTS = {
     rejectUnauthorized: false
   }
 }
-
-module.exports = function makeGemini (opts = {}) {
   const finalOpts = { ...DEFAULT_OPTS, opts }
   // const SUPPORTED_METHODS = ['HEAD', 'GET', 'POST', 'DELETE']
 
