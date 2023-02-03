@@ -1,6 +1,6 @@
 {
   "name": "gemini-handle",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "",
   "bin": "bin.js",
   "main": "index.js",
@@ -12,6 +12,6 @@
   "license": "ISC",
   "dependencies": {
     "@derhuerst/gemini": "^1.3.0",
-    "make-fetch": "^3.1.1"
+    "make-fetch": "github:ducksandgoats/make-fetch"
   }
 }
