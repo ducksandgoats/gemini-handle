@@ -35,13 +35,13 @@ const DEFAULT_OPTS = {
       const toRequest = new URL(url, referrer)
 
       if (toRequest.protocol !== 'gemini:') {
-        return sendTheData(signal, {statusCode: 409, headers: {}, data: ['wrong protocol']})
+        return sendTheData(signal, {status: 409, headers: {}, body: ['wrong protocol']})
       } else if (!method) {
-        return sendTheData(signal, {statusCode: 409, headers: {}, data: ['something wrong with method']})
+        return sendTheData(signal, {status: 409, headers: {}, body: ['something wrong with method']})
       }
 
       if(toRequest.hostname === '_'){
-        return sendTheData(signal, {statusCode: 20 * 10, statusText: 'works', headers: {'Content-Type': 'text/plain; charset=utf-8'}, data: ['works']})
+        return sendTheData(signal, {status: 20 * 10, statusText: 'works', headers: {'Content-Type': 'text/plain; charset=utf-8'}, body: ['works']})
       }
       
       if (!toRequest.hostname.startsWith('gemini.')) {
@@ -60,10 +60,10 @@ const DEFAULT_OPTS = {
             const data = res
 
             resolve({
-              statusCode: statusCode * 10,
+              status: statusCode * 10,
               statusText,
               headers,
-              data
+              body
             })
           }
         })
