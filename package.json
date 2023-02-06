@@ -1,6 +1,6 @@
 {
   "name": "gemini-handle",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "",
   "bin": "bin.js",
   "main": "index.js",
