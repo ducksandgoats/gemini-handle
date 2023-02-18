@@ -1,7 +1,9 @@
 module.exports = async function makeGemini(opts = {}) {
 const geminiReq = require('@derhuerst/gemini/client')
   const { makeRoutedFetch } = await import('make-fetch')
-  const { fetch, router } = makeRoutedFetch({onNotFound: handleEmpty, onError: handleError})
+  const { fetch, router } = makeRoutedFetch({ onNotFound: handleEmpty, onError: handleError })
+  const parse = require('gemini-to-html/parse')
+  const render = require('gemini-to-html/render')
   
   function handleEmpty(request) {
     const { url, headers: reqHeaders, method, body, signal } = request
@@ -73,7 +75,7 @@ const DEFAULT_OPTS = {
               status: statusCode * 10,
               statusText,
               headers,
-              body: data
+              body: render(data)
             })
           }
         })
