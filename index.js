@@ -1,8 +1,25 @@
 module.exports = async function makeGemini(opts = {}) {
 const geminiReq = require('@derhuerst/gemini/client')
   const { makeRoutedFetch } = await import('make-fetch')
-  const {fetch, router} = makeRoutedFetch()
-// const { Readable } = require('stream')
+  const { fetch, router } = makeRoutedFetch({onNotFound: handleEmpty, onError: handleError})
+  
+  function handleEmpty(request) {
+    const { url, headers: reqHeaders, method, body, signal } = request
+    if(signal){
+      signal.removeEventListener('abort', takeCareOfIt)
+    }
+    
+    return {status: 400, headers: {}, body: 'did not find any data'}
+  }
+
+  function handleError(e, request) {
+    const { url, headers: reqHeaders, method, body, signal } = request
+    if(signal){
+      signal.removeEventListener('abort', takeCareOfIt)
+    }
+
+    return {status: 500, headers: {}, body: e.stack}
+  }
 
 const DEFAULT_OPTS = {
   followRedirects: true,
@@ -12,7 +29,6 @@ const DEFAULT_OPTS = {
   }
 }
   const finalOpts = { ...DEFAULT_OPTS, opts }
-  // const SUPPORTED_METHODS = ['HEAD', 'GET', 'POST', 'DELETE']
 
   function takeCareOfIt(data){
     console.log(data)
@@ -26,7 +42,7 @@ const DEFAULT_OPTS = {
     return theData
   }
 
-  async function handleGemini(request) {
+  router.get('gemini://*/**', async function (request) {
     const { url, method, headers: reqHeaders, body, signal, referrer } = request
 
     if(signal){
@@ -34,19 +50,13 @@ const DEFAULT_OPTS = {
     }
       const toRequest = new URL(url, referrer)
 
-      if (toRequest.protocol !== 'gemini:') {
-        return sendTheData(signal, {status: 409, headers: {}, body: ['wrong protocol']})
-      } else if (!method) {
-        return sendTheData(signal, {status: 409, headers: {}, body: ['something wrong with method']})
-      }
-
       if(toRequest.hostname === '_'){
         return sendTheData(signal, {status: 20 * 10, statusText: 'works', headers: {'Content-Type': 'text/plain; charset=utf-8'}, body: ['works']})
       }
       
-      if (!toRequest.hostname.startsWith('gemini.')) {
-        toRequest.hostname = 'gemini.' + toRequest.hostname
-      }
+      // if (!toRequest.hostname.startsWith('gemini.')) {
+      //   toRequest.hostname = 'gemini.' + toRequest.hostname
+      // }
 
       const mainObj = await new Promise((resolve, reject) => {
         geminiReq(toRequest.href, finalOpts, (err, res) => {
@@ -63,15 +73,13 @@ const DEFAULT_OPTS = {
               status: statusCode * 10,
               statusText,
               headers,
-              body
+              body: data
             })
           }
         })
       })
       return sendTheData(signal, mainObj)
-  }
-
-  router.any('gemini://*/**', handleGemini)
+  })
 
   return fetch
 }
