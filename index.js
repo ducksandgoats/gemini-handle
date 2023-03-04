@@ -2,6 +2,7 @@ module.exports = async function makeGemini(opts = {}) {
 const geminiReq = require('@derhuerst/gemini/client')
   const { makeRoutedFetch } = await import('make-fetch')
   const { fetch, router } = makeRoutedFetch({ onNotFound: handleEmpty, onError: handleError })
+  const { Readable } = require('stream')
   
   function handleEmpty(request) {
     const { url, headers: reqHeaders, method, body, signal } = request
@@ -29,6 +30,16 @@ const DEFAULT_OPTS = {
   }
 }
   const finalOpts = { ...DEFAULT_OPTS, opts }
+  const useTimeOut = finalOpts.timeout
+
+function intoStream (data) {
+  return new Readable({
+    read () {
+      this.push(data)
+      this.push(null)
+    }
+  })
+}
 
   function takeCareOfIt(data){
     console.log(data)
@@ -40,6 +51,42 @@ const DEFAULT_OPTS = {
       theSignal.removeEventListener('abort', takeCareOfIt)
     }
     return theData
+  }
+
+  async function handleData(timeout, data) {
+    if (timeout) {
+      return await Promise.race([
+        new Promise((resolve, reject) => setTimeout(() => { const err = new Error('timed out'); err.name = 'timeout'; reject(err) }, timeout)),
+        data
+      ])
+    } else {
+      return await data
+    }
+  }
+
+  function makeQuery(link) {
+    return new Promise((resolve, reject) => {
+        geminiReq(link, finalOpts, (err, res) => {
+          if (err) {
+            reject(err)
+          } else {
+            const { statusCode, statusMessage: statusText, meta } = res
+
+        const isOK = (statusCode >= 10) && (statusCode < 300)
+
+        const headers = isOK ? { 'Content-Type': meta } : {}
+
+        const data = isOK ? res : intoStream(meta)
+
+            resolve({
+              status: statusCode * 10,
+              statusText,
+              headers,
+              body: data
+            })
+          }
+        })
+    })
   }
 
   router.get('gemini://*/**', async function (request) {
@@ -56,29 +103,11 @@ const DEFAULT_OPTS = {
       
       if (!toRequest.hostname.startsWith('gemini.')) {
         toRequest.hostname = 'gemini.' + toRequest.hostname
-      }
+    }
+    
+    const mainTimeout = reqHeaders.has('x-timer') || toRequest.searchParams.has('x-timer') ? reqHeaders.get('x-timer') !== '0' || toRequest.searchParams.get('x-timer') !== '0' ? Number(reqHeaders.get('x-timer') || toRequest.searchParams.get('x-timer')) * 1000 : undefined : useTimeOut
 
-      const mainObj = await new Promise((resolve, reject) => {
-        geminiReq(toRequest.href, finalOpts, (err, res) => {
-          if (err) {
-            reject(err)
-          } else {
-            const { statusCode, statusMessage: statusText } = res
-
-            const headers = {'Content-Type': 'text/gemini'}
-
-            const data = res
-
-            resolve({
-              status: statusCode * 10,
-              statusText,
-              headers,
-              body: data
-            })
-          }
-        })
-      })
-      return sendTheData(signal, mainObj)
+      return sendTheData(signal, await handleData(mainTimeout, makeQuery(toRequest.href)))
   })
 
   return fetch
